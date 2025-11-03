@@ -247,6 +247,23 @@ with col_main:
             Action.C.value: "合作 🤝",
             Action.D.value: "背叛 ⚔️"
         }
+        # 说明：合作/背叛的得分机制
+        st.markdown("""
+        <div style='
+            background-color:#f8fafc;
+            border-left:5px solid #2563eb;
+            padding:10px 16px;
+            margin-top:10px;
+            font-size:15px;
+            color:#334155;
+        '>
+        <b>规则说明：</b><br>
+        当你与对手同时合作 🤝 → 双方各得 <b>4 分</b>；<br>
+        若你背叛 ⚔️ 而对方合作 → 你得 <b>5 分</b>，对方减 <b>1 分</b>；<br>
+        若双方都背叛 ⚔️ → 各得 <b>0 分</b>；<br>
+        若你合作 🤝 而对方背叛 ⚔️ → 你减 <b>1 分</b>，对方得 <b>5 分</b>。
+        </div>
+        """, unsafe_allow_html=True)
         choice_label = st.radio(
             "Your action:",
             options=["合作 🤝", "背叛 ⚔️"],
