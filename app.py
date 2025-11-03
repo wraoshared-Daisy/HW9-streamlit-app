@@ -174,7 +174,7 @@ def render_cd_bar(c_pct, d_pct, opp_name):
         <div style="width:{c_pct:.2f}%;background:#16a34a;"></div>
         <div style="width:{d_pct:.2f}%;background:#dc2626;"></div>
     </div>
-    <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:6px;color:#374151;">
+    <div style="display:flex;justify-content:space-between;font-size:16px;margin-top:6px;color:#374151;">
         <span><b style='color:#16a34a;'>合作 🤝</b>: {c_pct:.1f}%</span>
         <span><b style='color:#dc2626;'>背叛 ⚔️</b>: {d_pct:.1f}%</span>
     </div>
@@ -198,6 +198,49 @@ def extract_user_outcome(step_info):
     return None, None, None, None
 
 
+def get_agent_by_name(sim: Simulator, name: str):
+    """从模拟器里根据名字拿到真正的 Agent 对象"""
+    for a in sim.agents:
+        if a.name == name:
+            return a
+    return None
+
+def render_last_action(user_agent, opp_agent):
+    """
+    显示这个对手上一次对 USER 的动作
+    last_with 返回类似: (my_last, opp_last, payoff)
+    """
+    if user_agent is None or opp_agent is None:
+        return
+
+    my_last, opp_last, _ = user_agent.last_with(opp_agent)
+
+    if opp_last is None:
+        st.markdown(
+            "<div style='font-size:18px;color:#6b7280;'>这个对手还没有和你打过一轮。</div>",
+            unsafe_allow_html=True
+        )
+    else:
+        # 根据你前面 Action 的写法，这里兼容枚举/字符串
+        if hasattr(opp_last, "value"):
+            opp_v = opp_last.value
+        else:
+            opp_v = str(opp_last)
+
+        if opp_v.upper() == "C":
+            txt = "合作 🤝"
+            color = "#16a34a"
+        else:
+            txt = "背叛 ⚔️"
+            color = "#dc2626"
+
+        st.markdown(
+            f"<div style='font-size:18px;'>上一次 <b style='color:#0f172a;'>{cn(opp_agent.name)}</b> 对你是："
+            f"<b style='color:{color};'>{txt}</b></div>",
+            unsafe_allow_html=True
+        )
+
+
 col_left_pad, col_main, col_right_pad = st.columns([2, 4, 2])
 with col_left_pad:
     st.markdown("<div class='pad-col' style='border-right:1px solid #e5e7eb;'></div>", unsafe_allow_html=True)
@@ -208,6 +251,13 @@ with col_main:
 # ---------- 页面 ----------
     st.markdown(
         "<h1 style='text-align:center; font-size:38px; font-weight:900; color:#1e293b;'>三国争霸小游戏 ⚔️</h1>",
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        "<p style='text-align:center; font-size:20px; color:#64748b;'>"
+        "游戏说明：你扮演的是 <span style='color:#dc2626; font-weight:600;'>诸葛亮</span>，"
+        "请选择你的策略，目标在第100天时的收益排在第一名🏆"
+        "</p>",
         unsafe_allow_html=True
     )
     st.markdown("---")
@@ -223,7 +273,12 @@ with col_main:
     left, right = st.columns([1.3, 1.0])
 
     with left:
-        st.subheader(f"天数: {sim.round + 1}")
+        st.markdown(
+            f"<h3 style='font-size26px; font-weight:700; color:#1e293b;'>"
+            f"天数: <span style='color:#2563eb;'>{sim.round + 1}</span>"
+            f"</h3>",
+            unsafe_allow_html=True
+        )
 
         # 先生成“本轮预览配对”（第一轮也会尝试得到）
         preview_pairs = ensure_preview_pairs(sim)
@@ -313,6 +368,10 @@ with col_main:
         else:
             c_pct, d_pct = opponent_cd_percent_global(sim, opp_name)
             render_cd_bar(c_pct, d_pct, opp_name)
+
+            # 👇 新增：显示这个人上一次对我做了什么
+            opp_agent = get_agent_by_name(sim, opp_name)
+            render_last_action(user, opp_agent)
 
     # Leaderboard
     st.markdown("---")
