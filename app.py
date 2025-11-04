@@ -375,7 +375,13 @@ with col_main:
 
     # Leaderboard
     st.markdown("---")
-    st.subheader("争霸排行榜（平均收益排行榜）")
+    st.markdown(
+        f"<h3 style='font-size:26px; font-weight:800; color:#1e293b;'>"
+        f"第 <span style='color:#2563eb;'>{sim.round}</span> 天 · 争霸排行榜"
+        f"<span style='font-size:16px; color:#6b7280;'>（平均收益）</span>"
+        f"</h3>",
+        unsafe_allow_html=True
+    )
 
     df = pd.DataFrame(sim.summary(), columns=["Agent", "Total", "Avg/Round"])
 
@@ -494,4 +500,66 @@ with col_main:
             use_container_width=True,
             height=360
         )
+
+    # ===== 下面是新增的可视化 & 下载功能 =====
+
+    # 1) 先把合作率算出来：从 sim.action_counts 里取
+    coop_rows = []
+    action_counts = getattr(sim, "action_counts", {})
+    for agent_name in df_plot["Agent"]:
+        counts = action_counts.get(agent_name, {})
+        c = counts.get("C", 0)
+        d = counts.get("D", 0)
+        tot = c + d
+        if tot > 0:
+            coop_rate = 100.0 * c / tot  # 转百分比
+        else:
+            coop_rate = None
+        coop_rows.append(coop_rate)
+
+    df_plot["CoopRate"] = coop_rows  # 新增一列：合作率(%)
+
+    # 2) 画散点图：x=合作率, y=平均收益, 颜色=角色
+    scatter = (
+        alt.Chart(df_plot)
+        .mark_circle(size=140)
+        .encode(
+            x=alt.X("CoopRate:Q", title="合作率 (%)"),
+            y=alt.Y("Avg/Round:Q", title="平均收益"),
+            color=alt.Color(
+                "Display:N",
+                legend=alt.Legend(
+                    title="",
+                    orient="top",
+                    direction="horizontal",  # ✅ 水平排列，可自动换行形成两行
+                    columns=10,  # ✅ 设大一些，自动两行显示
+                    labelFontSize=15,  # ✅ 图例字体大
+                    titleFontSize=0,  # ✅ 标题大
+                    symbolSize=90,  # ✅ 色块明显
+                    padding=5,  # ✅ 图例整体留白
+                ),
+                scale=alt.Scale(scheme="category20")  # ✅ 20种颜色方案
+            ),
+            tooltip=[
+                alt.Tooltip("Display:N", title="角色"),
+                alt.Tooltip("Agent:N", title="策略代码"),
+                alt.Tooltip("CoopRate:Q", format=".1f", title="合作率(%)"),
+                alt.Tooltip("Avg/Round:Q", format=".3f", title="平均收益"),
+            ],
+        )
+        .properties(
+            title=alt.TitleParams(
+                text="合作率 vs 平均收益",  # ✅ 图标题
+                fontSize=20,  # ✅ 标题更大
+                fontWeight="bold",  # ✅ 加粗
+                anchor="middle",  # ✅ 居中显示
+                dy=20  # ✅ 稍微上移一点，视觉更舒服
+            ),
+            width=600,  # ✅ 方形宽
+            height=600  # ✅ 方形高
+        )
+    )
+
+    st.altair_chart(scatter, use_container_width=True)
+
 
